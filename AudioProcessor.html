@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>Audio Processor</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+        
+        <style>
+            .jumbotron {
+                background-color: #00008B;
+                border-radius: 25px;
+                margin-top: 25px;
+            }
+            
+            .recorder {
+                color: floralwhite;
+                font-family: monospace;
+                text-align: center;
+            }
+            
+            .btn-circle {
+                width: 30px;
+                height: 30px;
+                text-align: center;
+                padding: 6px 0;
+                font-size: 12px;
+                line-height: 1.428571429;
+                border-radius: 25px;
+                margin-top: 20px;  
+            }
+            
+            .canvas {
+              background:#00008B;
+              text-align: center;
+              width: 50%;
+              height: 100%;
+              
+            }
+            
+        </style>
+
+        <script>
+            function myFunction() {
+            document.getElementById("demo").style.visibility="hidden";
+            }
+        </script>
+
+        <script>
+            let audioIN = { audio: true }; 
+            navigator.mediaDevices.getUserMedia(audioIN)
+            .then(function (mediaStreamObj) { 
+
+            // Start record 
+            let start = document.getElementById('record_button'); 
+            // Stop record 
+            let stop = document.getElementById('stop_button'); 
+            let playAudio = document.getElementById('adioPlay'); 
+            let mediaRecorder = new MediaRecorder(mediaStreamObj); 
+
+            start.addEventListener('click', function (ev) { 
+                mediaRecorder.start();  
+            }) 
+
+            // Stop event 
+            stop.addEventListener('click', function (ev) { 
+              mediaRecorder.stop(); 
+            }); 
+
+            mediaRecorder.ondataavailable = function (ev) { 
+              dataArray.push(ev.data); 
+            } 
+
+            let dataArray = []; 
+
+            mediaRecorder.onstop = function (ev) { 
+
+            let audioData = new Blob(dataArray,  
+                        { 'type': 'audio/mp3;' });
+
+            dataArray = []; 
+
+            let audioSrc = window.URL 
+                .createObjectURL(audioData); 
+
+            playAudio.src = audioSrc;
+            } 
+
+            playAudio.load();
+            var context = new AudioContext();
+            var src = context.createMediaElementSource(playAudio);
+            var analyser = context.createAnalyser();
+
+            var canvas = document.getElementById("canvas");
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            var ctx = canvas.getContext("2d");
+            src.connect(analyser);
+            analyser.connect(context.destination);
+
+            analyser.fftSize = 1024;
+
+            var bufferLength = analyser.frequencyBinCount;
+            console.log(bufferLength);
+
+            var infoArray = new Uint8Array(bufferLength);
+
+            var WIDTH = canvas.width;
+            var HEIGHT = canvas.height;
+
+            var barWidth = (WIDTH / bufferLength) * 1.5;
+            var barHeight;
+            var x = 0;
+
+            function renderFrame() {
+            requestAnimationFrame(renderFrame);
+
+            x = 0;
+
+            analyser.getByteFrequencyData(infoArray);
+
+            var MAX_AMP = infoArray[0];
+
+            for (let i = 1; i < bufferLength; i++) {
+                if (MAX_AMP < infoArray[i]) {
+                    MAX_AMP = infoArray[i];
+                }
+            }
+
+            ctx.fillStyle = "#00008B";
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+                for (var i = 0; i < bufferLength; i++) {
+                barHeight = HEIGHT * (infoArray[i] / MAX_AMP);
+
+                var r = barHeight + (25 * (i/bufferLength));
+                var g = 250 * (i/bufferLength);
+                var b = 50;
+
+                ctx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+                ctx.fillRect(x, HEIGHT - barHeight, barWidth, barHeight);
+
+                x += barWidth + 1;
+                }
+            }
+            renderFrame();  
+          }) 
+
+          // If any error occurs then handles the error  
+          .catch(function (err) { 
+            console.log(err.name, err.message); 
+          }); 
+        </script> 
+    
+    </head> 
+    
+<!-----------------------------------------------body------------------------------------------------->
+    
+    <body style="background-color: #CFD7E2 "> 
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                <div class="container">
+                    <a class="navbar-brand" href="#" style="font-family:monospace">Audio Processor</a>
+                    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item active">
+                        <a class="nav-link" href="#" style="font-family:monospace">Application</a>
+                        </li>
+                    </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="container jumbotron">
+                <div class="recorder text-center">
+                    <h5 id="demo">Click the button to start recording...</h5>
+                    <!--canvas to visualize the voice-->
+                    <div>
+                    <canvas id="canvas" class = "canvas" style="margin-top: 20px"></canvas>
+                    </div>
+                    <!--button for 'start and stop recording'-->
+                    <div class = "container buttons">
+                        <button onclick="myFunction()" id = "record_button" class=" btn btn-danger btn-circle" type="button" >
+                        <span class="fa fa-microphone"></span>
+                        </button>
+                        <button id = "stop_button" class = " btn btn-danger btn-circle" type="button" >
+                        <span class="fa fa-square"></span>
+                        </button>
+                    </div>
+
+                    <div class="container audio" style="margin-top:20px">
+                        <audio id="adioPlay" controls></audio>
+                    </div>
+
+                </div>
+
+            </div> 
+    </body>
+</html>
